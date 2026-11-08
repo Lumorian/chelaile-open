@@ -7,8 +7,8 @@ SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/android-sdk}}"
 BT="$(ls -d "$SDK"/build-tools/* 2>/dev/null | sort -V | tail -1)"
 PLATFORM="$SDK/platforms/android-34/android.jar"
 OUT="build"
-VERSION_NAME="0.2.2"
-VERSION_CODE="4"
+VERSION_NAME="0.3.0"
+VERSION_CODE="5"
 
 if [ ! -x "$BT/aapt2" ]; then
   echo "找不到 Android SDK：$SDK（需要 build-tools 与 platforms;android-34）" >&2

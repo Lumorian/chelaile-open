@@ -8,6 +8,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -31,6 +32,10 @@ public class LineScreen extends Screen {
     private int targetOrder;
     private String preferStationName;
     private boolean preferApplied;
+    /** 推荐方案的下车站（0 表示不是从推荐卡进入）。 */
+    private int alightOrder;
+    private String alightName = "";
+    private LinearLayout planBox;
 
     private Models.Detail detail;
     private Models.Timetable timetable;
@@ -77,6 +82,13 @@ public class LineScreen extends Screen {
         this.preferStationName = preferStationName;
     }
 
+    public LineScreen(MainActivity host, Models.Line line, int targetOrder, String preferStationName,
+                      int alightOrder, String alightName) {
+        this(host, line, targetOrder, preferStationName);
+        this.alightOrder = Math.max(0, alightOrder);
+        this.alightName = alightName == null ? "" : alightName;
+    }
+
     @Override
     public String title() {
         return displayName(line);
@@ -86,7 +98,10 @@ public class LineScreen extends Screen {
         if (line == null) return "线路";
         String n = line.name == null ? "" : line.name;
         if (n.isEmpty()) return "线路";
-        return n.endsWith("路") ? n : n + "路";
+        // 线路名本身可能已经带“路/线”（如 1路区间、快速公交1线），只给纯数字补“路”。
+        if (n.contains("路") || n.contains("线")) return n;
+        if (n.matches("^[0-9]+$") || n.matches("^[夜专快加急]?[0-9]+$")) return n + "路";
+        return n;
     }
 
     @Override
@@ -160,6 +175,14 @@ public class LineScreen extends Screen {
         LinearLayout.LayoutParams mLp = Ui.matchWrap();
         mLp.topMargin = Ui.dp(host, 4);
         card.addView(metaView, mLp);
+
+        planBox = Ui.column(host);
+        planBox.setBackground(Ui.round(Ui.ACCENT_DIM, Ui.dp(host, 10)));
+        planBox.setPadding(Ui.dp(host, 10), Ui.dp(host, 9), Ui.dp(host, 10), Ui.dp(host, 9));
+        planBox.setVisibility(View.GONE);
+        LinearLayout.LayoutParams plp = Ui.matchWrap();
+        plp.topMargin = Ui.dp(host, 10);
+        card.addView(planBox, plp);
 
         LinearLayout actions = Ui.row(host);
         LinearLayout.LayoutParams aLp = Ui.matchWrap();
@@ -379,9 +402,31 @@ public class LineScreen extends Screen {
         etaSubView.setText(String.join(" · ", sub));
         updatedView.setText("更新于 " + Format.nowClock() + (d.realData ? " · 实时" : " · 非实时（参考发车信息）"));
 
+        refreshPlanCard(d);
         renderBuses(d);
         renderTimeline(d);
         renderHistory(d);
+    }
+
+    /** 从地点搜索的推荐卡进入时，在顶部展示上/下车站。 */
+    private void refreshPlanCard(Models.Detail d) {
+        planBox.removeAllViews();
+        if (alightOrder <= 0) {
+            planBox.setVisibility(View.GONE);
+            return;
+        }
+        Models.Stop board = stopAt(targetOrder);
+        Models.Stop alight = stopAt(alightOrder);
+        if (board == null || alight == null) {
+            planBox.setVisibility(View.GONE);
+            return;
+        }
+        planBox.setVisibility(View.VISIBLE);
+        planBox.addView(Ui.text(host, "推荐乘车 · 在 " + board.sn + " 上车", 12, Ui.ACCENT, true));
+        TextView body = Ui.text(host, "乘 " + Math.max(1, alightOrder - targetOrder) + " 站，在 " + alight.sn + " 下车", 13, Ui.TEXT, false);
+        LinearLayout.LayoutParams lp = Ui.matchWrap();
+        lp.topMargin = Ui.dp(host, 3);
+        planBox.addView(body, lp);
     }
 
     private int predictionColor(Models.Detail d) {
@@ -447,87 +492,130 @@ public class LineScreen extends Screen {
         head.addView(Ui.chip(host, "共 " + d.stops.size() + " 站", Ui.SURFACE2, Ui.MUTED));
         timelineBox.addView(head);
 
-        TextView legend = Ui.text(host, "灰点=已过站 · 蓝点=车辆下一站 · 绿点=你在这 · 淡蓝=未到 · 🚌=车辆位置\n点任一站点，可设置上车/下车提醒", 11, Ui.FAINT, false);
+        TextView legend = Ui.text(host, "左右滑动查看全部站点 · 点站点可设置上下车提醒\n"
+                + "灰点=已过站 · 深蓝点=车辆下一站 · 绿点=你在这 · 橙点=下车站 · 浅蓝=未到 · 🚌=车辆位置", 11, Ui.FAINT, false);
         LinearLayout.LayoutParams llp = Ui.matchWrap();
         llp.topMargin = Ui.dp(host, 4);
         timelineBox.addView(legend, llp);
 
         Models.Bus bus = Format.nearestBus(d);
         int nearest = nearestOrder(d);
+        final int cellWidth = Ui.dp(host, 96);
+        final int cellHeight = Ui.dp(host, 158);
 
-        LinearLayout list = Ui.column(host);
-        LinearLayout.LayoutParams lLp = Ui.matchWrap();
-        lLp.topMargin = Ui.dp(host, 10);
-        timelineBox.addView(list, lLp);
+        HorizontalScrollView scroller = new HorizontalScrollView(host);
+        scroller.setHorizontalScrollBarEnabled(false);
+        scroller.setFillViewport(false);
+        scroller.setClipToPadding(false);
+        scroller.setPadding(Ui.dp(host, 2), 0, Ui.dp(host, 2), 0);
 
-        for (Models.Stop s : d.stops) {
-            boolean passed = bus != null && s.order < bus.order;
-            if (bus != null && s.order == bus.order) {
-                list.addView(busMarker(bus, d));
-            }
-            list.addView(timelineRow(s, passed, bus != null && s.order == bus.order, s.order == nearest, bus, d));
+        LinearLayout track = Ui.row(host);
+        track.setPadding(0, 0, 0, 0);
+        int focusIndex = 0;
+        int index = 0;
+        for (Models.Stop st : d.stops) {
+            boolean passed = bus != null && st.order < bus.order;
+            boolean busNext = bus != null && st.order == bus.order;
+            boolean isNearest = st.order == nearest;
+            boolean isAlight = alightOrder > 0 && st.order == alightOrder;
+            if (isNearest) focusIndex = index;
+            View cell = timelineCell(st, passed, busNext, isNearest, isAlight, bus);
+            track.addView(cell, new LinearLayout.LayoutParams(cellWidth, cellHeight));
+            index++;
         }
-        if (bus != null && bus.order > d.stops.size() + 1) {
-            // 车辆已在终点之后，无需标记
+        if (bus != null && bus.order > 0) {
+            // 若没有匹配到任何站（数据异常），至少聚焦车辆位置附近。
+            boolean found = false;
+            for (Models.Stop st : d.stops) if (st.order == nearest) found = true;
+            if (!found) focusIndex = Math.max(0, Math.min(d.stops.size() - 1, bus.order - 1));
         }
+        scroller.addView(track, new HorizontalScrollView.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        LinearLayout.LayoutParams slp = Ui.matchWrap();
+        slp.topMargin = Ui.dp(host, 10);
+        timelineBox.addView(scroller, slp);
+
+        final int scrollTo = focusIndex;
+        scroller.post(() -> {
+            int x = scrollTo * cellWidth - scroller.getWidth() / 2 + cellWidth / 2;
+            scroller.scrollTo(Math.max(0, x), 0);
+        });
     }
 
-    private View timelineRow(Models.Stop s, boolean passed, boolean busNext, boolean nearest, Models.Bus bus, Models.Detail d) {
-        FrameLayout frame = new FrameLayout(host);
-        int rowHeight = Ui.dp(host, 40);
-        Ui.setRipple(frame);
-        frame.setOnClickListener(v -> showStationReminderDialog(s));
+    /** 横向时间轴的单个站点格：站名、轨道圆点、状态标签。 */
+    private View timelineCell(Models.Stop s, boolean passed, boolean busNext, boolean nearest, boolean alight, Models.Bus bus) {
+        LinearLayout cell = Ui.column(host);
+        cell.setGravity(Gravity.CENTER_HORIZONTAL);
+        cell.setPadding(Ui.dp(host, 2), Ui.dp(host, 4), Ui.dp(host, 2), Ui.dp(host, 2));
+        Ui.setRipple(cell);
+        cell.setOnClickListener(v -> showStationReminderDialog(s));
 
-        View line = new View(host);
-        line.setBackgroundColor(passed ? Ui.LINE : 0xFF243040);
-        FrameLayout.LayoutParams lineLp = new FrameLayout.LayoutParams(Ui.dp(host, 2), ViewGroup.LayoutParams.MATCH_PARENT);
-        lineLp.gravity = Gravity.CENTER_HORIZONTAL;
-        frame.addView(line, lineLp);
+        String topText = " ";
+        int topColor = Ui.FAINT;
+        if (busNext) {
+            double dist = bus == null ? -1 : (bus.distanceToSc > 0 ? bus.distanceToSc : bus.distanceToWaitStn);
+            topText = dist > 0 ? "🚌 距 " + Geo.formatDistance((int) dist) : "🚌 即将到站";
+            topColor = Ui.ACCENT;
+        } else if (nearest) {
+            topText = "📍 你在这";
+            topColor = Ui.GREEN;
+        } else if (alight) {
+            topText = "🎯 下车站";
+            topColor = Ui.ORANGE;
+        }
+        TextView top = Ui.text(host, topText, 10, topColor, true);
+        top.setGravity(Gravity.CENTER);
+        top.setSingleLine(true);
+        top.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        cell.addView(top, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(host, 18)));
 
-        TextView dot = Ui.text(host, "●", 11, dotColor(passed, busNext, nearest), false);
-        dot.setGravity(Gravity.CENTER);
-        FrameLayout.LayoutParams dotLp = new FrameLayout.LayoutParams(rowHeight, rowHeight);
-        dotLp.gravity = Gravity.CENTER_HORIZONTAL;
-        frame.addView(dot, dotLp);
-
-        LinearLayout content = Ui.row(host);
-        content.setPadding(Ui.dp(host, 26), Ui.dp(host, 6), 0, Ui.dp(host, 6));
-        TextView name = Ui.text(host, s.sn, 14, passed ? Ui.FAINT : Ui.TEXT, nearest);
-        name.setSingleLine(true);
+        TextView name = Ui.text(host, s.sn, 12, passed ? Ui.FAINT : Ui.TEXT, nearest || busNext);
+        name.setGravity(Gravity.CENTER);
+        name.setMaxLines(2);
         name.setEllipsize(android.text.TextUtils.TruncateAt.END);
-        content.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        cell.addView(name, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(host, 38)));
+
+        FrameLayout rail = new FrameLayout(host);
+        View line = new View(host);
+        line.setBackgroundColor(passed ? Ui.LINE : Ui.TRACK);
+        FrameLayout.LayoutParams lineLp = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(host, 2));
+        lineLp.gravity = Gravity.CENTER_VERTICAL;
+        rail.addView(line, lineLp);
+
+        int color = dotColor(passed, busNext, nearest, alight);
+        View dot = new View(host);
+        int dotSize = nearest || busNext || alight ? Ui.dp(host, 15) : Ui.dp(host, 11);
+        dot.setBackground(Ui.round(color, Ui.dp(host, 8)));
+        FrameLayout.LayoutParams dotLp = new FrameLayout.LayoutParams(dotSize, dotSize);
+        dotLp.gravity = Gravity.CENTER;
+        rail.addView(dot, dotLp);
+        cell.addView(rail, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Ui.dp(host, 26)));
 
         if (nearest) {
-            String chipText = nearestDistance > 0 ? "你在这 · " + Geo.formatDistance(nearestDistance) : "你在这";
-            TextView chip = Ui.chip(host, chipText, Ui.ACCENT_DIM, Ui.ACCENT);
-            LinearLayout.LayoutParams clp = Ui.wrapWrap();
-            clp.rightMargin = Ui.dp(host, 6);
-            content.addView(chip, clp);
+            String dist = nearestDistance > 0 ? " · " + Geo.formatDistance(nearestDistance) : "";
+            TextView chip = Ui.chip(host, "你在这" + dist, Ui.ACCENT_DIM, Ui.GREEN);
+            chip.setSingleLine(true);
+            chip.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            cell.addView(chip, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        } else if (busNext) {
+            TextView chip = Ui.chip(host, "车辆下一站", Ui.ACCENT_DIM, Ui.ACCENT);
+            chip.setSingleLine(true);
+            cell.addView(chip);
+        } else if (alight) {
+            TextView chip = Ui.chip(host, "下车站", Ui.SURFACE2, Ui.ORANGE);
+            chip.setSingleLine(true);
+            cell.addView(chip);
+        } else {
+            cell.addView(Ui.text(host, " ", 10, Ui.FAINT, false));
         }
-        if (busNext) {
-            content.addView(Ui.chip(host, "车辆下一站", Ui.ACCENT_DIM, Ui.ACCENT));
-        }
-        frame.addView(content, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
-        return frame;
+        return cell;
     }
 
-    private int dotColor(boolean passed, boolean busNext, boolean nearest) {
+    private int dotColor(boolean passed, boolean busNext, boolean nearest, boolean alight) {
         if (busNext) return Ui.ACCENT;
         if (nearest) return Ui.GREEN;
-        if (passed) return 0xFF3A4150;
-        return 0xFF2F6DB5;
-    }
-
-    private View busMarker(Models.Bus bus, Models.Detail d) {
-        LinearLayout row = Ui.row(host);
-        row.setPadding(Ui.dp(host, 20), Ui.dp(host, 2), 0, Ui.dp(host, 6));
-        TextView dot = Ui.text(host, "🚌", 14, Ui.ACCENT, false);
-        dot.setPadding(0, 0, Ui.dp(host, 8), 0);
-        row.addView(dot);
-        double dist = bus.distanceToSc > 0 ? bus.distanceToSc : bus.distanceToWaitStn;
-        String text = dist > 0 ? "车辆在此 · 距下一站 " + Geo.formatDistance((int) dist) : "车辆即将到站";
-        row.addView(Ui.text(host, text, 11, Ui.ACCENT, true));
-        return row;
+        if (alight) return Ui.ORANGE;
+        if (passed) return Ui.DOT_PASSED;
+        return Ui.DOT_FUTURE;
     }
 
     private void renderHistory(Models.Detail d) {

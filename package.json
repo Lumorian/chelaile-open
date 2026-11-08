@@ -1,7 +1,7 @@
 {
   "name": "chelaile-open",
   "private": true,
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "车来了 App 开源复刻：Android 客户端 + TypeScript 协议研究栈",
   "type": "module",
   "workspaces": [

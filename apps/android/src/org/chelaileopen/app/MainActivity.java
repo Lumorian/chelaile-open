@@ -33,11 +33,25 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        App app = App.get(this);
+        Ui.configure(app.lightMode(), app.fontScale());
         getWindow().setStatusBarColor(Ui.BG);
         getWindow().setNavigationBarColor(Ui.SURFACE);
+        int flags = View.SYSTEM_UI_FLAG_LAYOUT_STABLE;
+        if (Ui.isLight()) {
+            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        }
+        getWindow().getDecorView().setSystemUiVisibility(flags);
         buildLayout();
         LocationHelper.attach(this);
-        switchTab(0);
+        int tab = savedInstanceState == null ? 0 : savedInstanceState.getInt("tab", 0);
+        switchTab(Math.max(0, Math.min(3, tab)));
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putInt("tab", currentTab);
     }
 
     private void buildLayout() {

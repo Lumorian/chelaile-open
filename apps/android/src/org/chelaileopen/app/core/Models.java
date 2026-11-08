@@ -107,6 +107,7 @@ public final class Models {
         public double wgsLng;
         public int distanceToSp;
         public int specialOrder;
+        public String gpsType = "";
 
         public static Stop from(JSONObject o) {
             Stop s = new Stop();
@@ -122,6 +123,8 @@ public final class Models {
             s.wgsLng = d(o, "wgsLng", 0);
             s.distanceToSp = i(o, "distanceToSp", 0);
             s.specialOrder = i(o, "specialOrder", s.order);
+            s.gpsType = str(o, "gpsType");
+            if (s.gpsType.isEmpty()) s.gpsType = str(o, "gpstype");
             return s;
         }
 
@@ -292,14 +295,20 @@ public final class Models {
         public Line line = new Line();
         public List<Stop> stations = new ArrayList<>();
         public List<double[]> path = new ArrayList<>();
+        public String gpsType = "";
 
         public static Route from(JSONObject o) {
             Route r = new Route();
             if (o == null) return r;
+            r.gpsType = o.optString("gpstype", "");
             r.line = Line.from(o.optJSONObject("line"));
             JSONArray st = o.optJSONArray("stations");
             if (st != null) {
-                for (int k = 0; k < st.length(); k++) r.stations.add(Stop.from(st.optJSONObject(k)));
+                for (int k = 0; k < st.length(); k++) {
+                    Stop s = Stop.from(st.optJSONObject(k));
+                    if (s.gpsType.isEmpty()) s.gpsType = r.gpsType;
+                    r.stations.add(s);
+                }
             }
             JSONArray rt = o.optJSONArray("route");
             if (rt != null) {
@@ -555,4 +564,97 @@ public final class Models {
             return t;
         }
     }
+    /** 官方地名搜索返回的 POI。 */
+    public static final class Poi {
+        public String address = "";
+        public String adname = "";
+        public String sn = "";
+        public String sn1 = "";
+        public String sn1Address = "";
+        public String sn1Tag = "";
+        public int sn1Type;
+        public double lat;
+        public double lng;
+
+        public static Poi from(JSONObject o) {
+            Poi p = new Poi();
+            if (o == null) return p;
+            p.address = str(o, "address");
+            p.adname = str(o, "adname");
+            p.sn = str(o, "sn");
+            p.sn1 = str(o, "sn1");
+            p.sn1Address = str(o, "sn1Address");
+            p.sn1Tag = str(o, "sn1Tag");
+            p.sn1Type = i(o, "sn1Type", 0);
+            p.lat = d(o, "lat", 0);
+            p.lng = d(o, "lng", 0);
+            return p;
+        }
+
+        public String title() {
+            return sn1.isEmpty() ? sn : sn1;
+        }
+    }
+
+    /** 地名搜索里的公交站候选。 */
+    public static final class PlaceStation {
+        public String sId = "";
+        public String sn = "";
+        public String gpsType = "";
+        public double lat;
+        public double lng;
+        public int distance;
+        public int stopNum;
+        public int subwayV2;
+
+        public static PlaceStation from(JSONObject o) {
+            PlaceStation s = new PlaceStation();
+            if (o == null) return s;
+            s.sId = str(o, "sId");
+            s.sn = str(o, "sn");
+            s.gpsType = str(o, "gpsType");
+            s.lat = d(o, "lat", 0);
+            s.lng = d(o, "lng", 0);
+            s.distance = i(o, "distance", 0);
+            s.stopNum = i(o, "stopNum", 0);
+            s.subwayV2 = i(o, "subwayV2", 0);
+            return s;
+        }
+    }
+
+    /** /api/bus/query!encryptedNSearch.action 解密后的结果。 */
+    public static final class PlaceSearch {
+        public String gpsType = "";
+        public String highlightKey = "";
+        public List<Line> lines = new ArrayList<>();
+        public List<Poi> pois = new ArrayList<>();
+        public List<PlaceStation> stations = new ArrayList<>();
+
+        public static PlaceSearch from(JSONObject o) {
+            PlaceSearch p = new PlaceSearch();
+            if (o == null) return p;
+            p.highlightKey = str(o, "highlightKey");
+            JSONObject r = o.optJSONObject("result");
+            if (r == null) r = o;
+            p.gpsType = str(r, "gpstype");
+            JSONArray ls = r.optJSONArray("lines");
+            if (ls != null) {
+                for (int i = 0; i < ls.length(); i++) p.lines.add(Line.from(ls.optJSONObject(i)));
+            }
+            JSONArray pois = r.optJSONArray("pois");
+            if (pois != null) {
+                for (int i = 0; i < pois.length(); i++) p.pois.add(Poi.from(pois.optJSONObject(i)));
+            }
+            JSONArray st = r.optJSONArray("stations");
+            if (st != null) {
+                for (int i = 0; i < st.length(); i++) p.stations.add(PlaceStation.from(st.optJSONObject(i)));
+            }
+            return p;
+        }
+
+        public int count() {
+            return lines.size() + pois.size() + stations.size();
+        }
+    }
+
 }

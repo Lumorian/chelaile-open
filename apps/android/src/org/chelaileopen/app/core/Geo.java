@@ -80,6 +80,8 @@ public final class Geo {
     public static double[] stationToWgs(Models.Stop s) {
         if (s.wgsLat != 0 && s.wgsLng != 0) return new double[]{s.wgsLat, s.wgsLng};
         if (s.lat == 0 && s.lng == 0) return new double[]{0, 0};
+        if ("wgs".equalsIgnoreCase(s.gpsType)) return new double[]{s.lat, s.lng};
+        if ("gcj".equalsIgnoreCase(s.gpsType)) return gcj02ToWgs84(s.lat, s.lng);
         return bd09ToWgs84(s.lat, s.lng);
     }
 

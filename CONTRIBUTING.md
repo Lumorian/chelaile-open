@@ -9,7 +9,7 @@
     export ANDROID_SDK_ROOT=$HOME/android-sdk
     cd apps/android
     ./build.sh
-    adb install -r build/chelaile-open-0.2.2.apk
+    adb install -r build/chelaile-open-0.3.0.apk
 
 模拟器：
 

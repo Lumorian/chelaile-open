@@ -4,22 +4,26 @@
 > 目标应用为「车来了」Android 7.6.8（com.ygkj.chelaile.standard，versionCode 436），本项目与之无官方关联。
 
 - **包名**：org.chelaileopen.app
-- **版本**：0.2.2（versionCode 4）
+- **版本**：0.3.0（versionCode 5）
 - **最低系统**：Android 7.0（API 24）
 - **编译/目标**：API 34
 - **语言**：Java 11（无 Kotlin、无 AndroidX、无第三方依赖）
-- **构建产物**：apps/android/build/chelaile-open-0.2.2.apk（约 70 KB）
-- **仓库发布 APK**：release/chelaile-open-0.2.2.apk
+- **构建产物**：apps/android/build/chelaile-open-0.3.0.apk（约 81 KB）
+- **仓库发布 APK**：release/chelaile-open-0.3.0.apk
 
 ## 1. 功能
 
 | 功能 | 实现 |
 | --- | --- |
-| 附近线路 | 自动定位/手动城市 → 附近物理站 → 按站分组展示线路、距离、到站预测；30 秒自动刷新 |
+| 附近线路 | 自动定位/手动城市 → 附近物理站 → 按站分组展示线路、距离、到站预测；10–60 秒自动刷新可调 |
 | 自动定位 | 首次启动请求定位权限；30 秒内缓存、GPS/网络双 provider、12 秒超时；成功后反查城市并自动切换 |
 | 多城市动态 | H5 静态站点 + App 明文实时接口；北京/上海等非韶关城市也能显示车辆位置与到站预测 |
 | 线路搜索 | 下载整城线路表（本地缓存 24 小时）后按线路号精确/模糊过滤，离线可用 |
 | 线路详情 | 首末班、票价、站数、当前车辆、最近站、完整站序时间轴、运营信息；非韶关用 App timeTable 补全动态车辆 |
+| 横向时间轴 | 站点横向滚动，打开自动聚焦最近站；灰=已过、蓝=车辆下一站、绿=你在这、橙=下车站 |
+| 地点搜索 / 直达推荐 | 地点与公交站拼音/中文搜索；按当前位置匹配上/下车站，显示步行距离、乘坐站数与推荐乘车卡 |
+| 亮色 / 深色 | 两套调色板即时切换，状态栏/导航栏图标同步，偏好持久化 |
+| 可调字号 | 标准 100% / 大 115% / 特大 130% / 超大 150%，全局生效并持久化 |
 | 实时到站 | 解析明文 stnStates 与 buses，支持“还有 N 站 / 即将到站 / 已过站 / 等待下一班” |
 | 发车时刻表 | 调用 line!depTimeTable.action；无在途车时把 forecastDesc 转成“下一班 HH:MM 发车” |
 | 换向 | 交换线路起终点并按反方向重新请求，targetOrder 同步重算 |
@@ -27,7 +31,7 @@
 | 上下车提醒 | 前台服务每 20 秒轮询；点时间轴任一站点设置“上车/提前 N 站/下车”提醒，通知带停止按钮 |
 | 历史到站 | 本机 SQLite 记录车辆跨站时刻，按 30 分钟桶展示平均值与样本数，明确标注“本机记录” |
 | 城市切换 | 499 个城市，支持拼音/中文搜索、热门城市、GPS 反查 |
-| 深色 UI | 深色主题、底部四 Tab（附近/搜索/关注/设置）、无广告、无账号、无统计 |
+| 原生 UI | 深色/亮色主题、底部四 Tab（附近/搜索/关注/设置）、无广告、无账号、无统计 |
 
 截图见 docs/screenshots：
 
@@ -42,6 +46,14 @@
 | 北京（自动定位） | 上海 71 路 |
 | --- | --- |
 | ![北京](screenshots/beijing.png) | ![上海](screenshots/shanghai.png) |
+
+| 地点搜索 | 直达推荐 | 推荐下车站 | 横向时间轴 |
+| --- | --- | --- | --- |
+| ![地点搜索](screenshots/route-search.png) | ![直达推荐](screenshots/route-plan.png) | ![下车站](screenshots/timeline-alight.png) | ![横向时间轴](screenshots/timeline.png) |
+
+| 亮色模式 | 130% 字号 |
+| --- | --- |
+| ![亮色](screenshots/settings-light.png) | ![130% 字号](screenshots/font-130.png) |
 
 ## 2. 构建与安装
 
@@ -58,9 +70,9 @@ build-tools;34.0.0 的 d8 8.2.2 对匿名内部类存在已知崩溃（NullPoint
     export ANDROID_SDK_ROOT=$HOME/android-sdk
     cd apps/android
     ./build.sh
-    # 输出 build/chelaile-open-0.2.2.apk
+    # 输出 build/chelaile-open-0.3.0.apk
 
-    adb install -r build/chelaile-open-0.2.2.apk
+    adb install -r build/chelaile-open-0.3.0.apk
     adb shell am start -n org.chelaileopen.app/.MainActivity
 
 构建脚本的执行链：
@@ -106,7 +118,7 @@ build-tools;34.0.0 的 d8 8.2.2 对匿名内部类存在已知崩溃（NullPoint
         ├── service/
         │   └── ReminderService.java      前台服务 + 通知
         └── ui/
-            ├── Ui.java                   深色组件工具（dp/卡片/按钮/间距）
+            ├── Ui.java                   主题/字号与组件工具（dp/卡片/按钮/间距）
             ├── Screen.java               页面基类
             ├── NearbyScreen.java / SearchScreen.java / FavoritesScreen.java / SettingsScreen.java
             ├── LineScreen.java           线路详情、时间轴、时刻表、提醒菜单
@@ -159,12 +171,27 @@ core/Api.java 同时使用两套公共参数：H5 参数负责需要 AES 解密�
 - buses[].order：车辆**正在驶向的下一站**站序，不是已过站序号。
 - “你在这”不使用服务端 nearStnOrder，而是用当前 GPS 对所有站点（优先 wgsLat/wgsLng，否则 BD-09→GCJ-02→WGS-84）计算几何最近站；同一位置打开 1 路/2 路/120 路都会落到同一站。nearStnOrder 只在坐标缺失时兜底。
 - 绿点 chip 显示“你在这 · N 米”，距离为 haversine 到最近站。
+- 时间轴横向滚动，打开时自动聚焦最近站；站点格显示站名、轨道圆点与状态 chip。
 - 时间轴高亮规则：
   - stop.order < bus.order：已过站（灰）
   - stop.order == bus.order：车辆下一站（蓝）
-  - 用户站：绿点 + “你在这”
+  - 用户站：绿点 + “你在这 · N 米”
+  - 推荐方案下车站：橙点 + “下车站”
   - 其余：淡蓝未到
-- 车辆 marker 插在 stop.order == bus.order 的行之前，文案“🚌 车辆在此 · 距下一站 N 米”。
+- 车辆 marker 插在 stop.order == bus.order 的行附近，文案“🚌 车辆在此 · 距下一站 N 米”。
+
+### 5.1.1 地点搜索与直达推荐
+
+搜索页有“线路 / 地点”两个 tab。地点搜索调用 query!encryptedNSearch.action，支持中文与拼音模糊匹配，结果分为地点（POI）、公交站、线路。
+
+选中地点后，客户端用当前位置附近线路与目的地坐标生成直达方案：
+
+- 遍历起点 nearLines 的去重 lineId，逐条请求 lineRoute 获取完整站序；
+- 在站序中找离起点最近的上车站（≤1500 米）和离目的地最近的下车站（≤1500 米），要求 alight.order > board.order；
+- 评分 = 上车步行距离 + 下车步行距离 + 乘坐站数 × 120 米，每条线路保留最优方案，取前 6 条；
+- 推荐卡显示“步行 N 米 → X 上车；乘 N 站 → Y 下车；步行 N 米到达”，点击进入线路页并高亮上/下车站；
+- 当前仅支持直达，不做换乘；无直达时明确提示“没有找到直达方案”。
+- lineRoute 根字段 gpstype 可能是 bd/wgs/gcj，Route/Stop 会保留 gpsType，坐标先按 gpsType 转 WGS-84 再计算距离。
 - ETA 使用 stopsLeft = targetOrder - bus.order：小于 0 且 depDesc 非空 → “等待下一班”，否则“车辆已过站”；等于 0 → “车辆即将到站”；大于 0 → “还有 N 站”。
 
 ### 5.2 发车时刻表
@@ -197,7 +224,7 @@ ReminderService 是 dataSync 类型前台服务：
 
 - wgs84ToGcj02 / gcj02ToWgs84（4 次迭代）
 - bd09ToGcj02 / gcj02ToBd09 / bd09ToWgs84
-- stationToWgs：优先 wgsLat/wgsLng，其次按 gpsType=="bd" 转换，否则原样
+- stationToWgs：优先 wgsLat/wgsLng；其次 gpsType==wgs 原样返回、gcj 走 gcj02ToWgs84、其余按 bd09ToWgs84 转换
 
 附近分组跳站点详情前，必须先把分组的 BD-09 坐标转 WGS-84 再查 nearPhysicalStns，否则会查到另一片区域。
 
@@ -213,11 +240,11 @@ ReminderService 是 dataSync 类型前台服务：
 
 首次启动自动请求定位权限（精确/近似）；授权后定位、反查城市并自动切换。拒绝定位仍可手动选城市或点“定位”重试。通知权限不在启动时请求，首次设置到站提醒时再请求，避免和定位权限弹窗竞争。
 
-## 7. 验证清单（2026-11-08，Android 14 x86_64 模拟器）
+## 7. 验证清单（2026-11-09，Android 14 x86_64 模拟器，0.3.0）
 
 | 项目 | 结果 |
 | --- | --- |
-| build.sh 从零构建 | ✅ 0.2.2，apksigner 校验通过 |
+| build.sh 从零构建 | ✅ 0.3.0，apksigner 校验通过 |
 | 冷启动/权限 | ✅ 首次启动弹定位权限；Allow 后自动定位 |
 | 自动定位韶关 | ✅ geo 113.591965,24.813761 → “韶关 · 附近” |
 | 自动定位北京 | ✅ geo 116.397,39.908 → “北京 · 附近” |
@@ -233,6 +260,11 @@ ReminderService 是 dataSync 类型前台服务：
 | 关注/长按取消 | ✅ 弹窗“取消关注 1路？” |
 | 清空历史 | ✅ 弹窗 + Toast“已清空历史记录” |
 | 城市切换/刷新间隔 | ✅ 热门城市、拼音搜索、10/15/30/60 秒 |
+| 亮色/深色切换 | ✅ 设置内即时切换，浅色背景/深色文字/卡片描边正常 |
+| 可调字号 | ✅ 100%/115%/130%/150% 全局生效，布局可滚动 |
+| 地点搜索（拼音） | ✅ 输入 sihui 返回四惠/四惠东/四惠长途客运站；tiantan 返回天坛公园等 POI |
+| 直达推荐（四惠） | ✅ 1路区间/1路，天安门东步行 260m 上车，乘 8 站到四惠枢纽站，步行 252m 到达 |
+| 推荐下车站 | ✅ 线路页出现“推荐乘车”卡，横向时间轴四惠枢纽站橙点 + “下车站” |
 
 ## 8. 已知限制
 
@@ -245,7 +277,8 @@ ReminderService 是 dataSync 类型前台服务：
 7. **历史到站只在本机**：依赖用户多次打开线路页，样本少时只显示“还没有记录”。
 8. **提醒依赖前台服务**：系统可能因省电策略回收；轮询间隔 20 秒，精度有限。
 9. **未实现**：地图选站、地铁换乘、账号登录、支付、广告、官方推送、语音搜索。
-10. **接口稳定性**：上游可能随时改参数/加签/停服；本项目只做学习研究，不保证长期可用。
+10. **路线推荐仅直达**：当前不做换乘；无直达时明确提示，后续补一次换乘方案。
+11. **接口稳定性**：上游可能随时改参数/加签/停服；本项目只做学习研究，不保证长期可用。
 
 ## 9. 安全与合规
 

@@ -17,7 +17,7 @@
 <p align="center">
   <img alt="license" src="https://img.shields.io/badge/license-MIT-blue.svg" />
   <img alt="android" src="https://img.shields.io/badge/Android-7.0%2B-3DDC84.svg" />
-  <img alt="version" src="https://img.shields.io/badge/version-0.2.2-3B82F6.svg" />
+  <img alt="version" src="https://img.shields.io/badge/version-0.3.0-3B82F6.svg" />
   <img alt="dependencies" src="https://img.shields.io/badge/runtime%20deps-0-brightgreen.svg" />
 </p>
 
@@ -30,9 +30,9 @@
 交付形态是 **Android APK**，不是网页套壳：
 
 - 无 Gradle、无 AndroidX、无 Kotlin、无第三方运行时依赖；
-- 一个约 70 KB 的 APK，直接调用线上网关；
+- 一个约 81 KB 的 APK，直接调用线上网关；
 - 附近线路、搜索、线路详情、发车时刻表、换向、收藏、上下车提醒、本机历史到站；
-- 深色界面，无广告、无登录、无埋点、无上传。
+- 深色/亮色界面与四档字号，无广告、无登录、无埋点、无上传。
 
 仓库里的 TypeScript protocol/server/web/CLI 是最初的协议研究与调试实现，保留下来用于对照和抓包复现，**不是**本项目的交付客户端。
 
@@ -40,7 +40,7 @@
 
 | 功能 | 说明 |
 | --- | --- |
-| 🚏 附近线路 | 自动定位或手选城市，按物理站分组展示线路、距离、到站预测，30 秒自动刷新 |
+| 🚏 附近线路 | 自动定位或手选城市，按物理站分组展示线路、距离、到站预测，10–60 秒自动刷新可调 |
 | 🎯 自动定位 | 首次启动请求定位权限，GPS/网络双 provider、12 秒超时；成功后反查城市并自动切换 |
 | 🌆 多城市动态 | H5 静态站点 + App 明文实时接口，北京/上海等非韶关城市也能显示车辆位置与到站预测 |
 | 🔍 线路搜索 | 首次下载整城线路表并缓存 24 小时，之后按线路号精确/模糊过滤，离线也能搜 |
@@ -52,7 +52,11 @@
 | 🔔 上下车提醒 | 点时间轴任一站点，设置上车/提前 N 站/下车提醒；前台服务轮询并发通知 |
 | 🕘 历史到站 | 本机 SQLite 记录车辆跨站时刻，按 30 分钟桶展示平均值与样本数 |
 | 🌆 城市切换 | 499 个城市，支持中文/拼音搜索、热门城市、GPS 反查 |
-| 🌙 深色界面 | 原生 View 绘制，无 WebView、无地图 SDK、无广告位 |
+| ↔️ 横向时间轴 | 站点横向滚动、自动聚焦最近站；灰=已过、蓝=车辆下一站、绿=你在这、橙=下车站 |
+| 🌗 亮色 / 深色 | 设置内即时切换，状态栏与导航栏同步适配，偏好持久化 |
+| 🔠 可调字号 | 标准 100% / 大 115% / 特大 130% / 超大 150%，全局生效并持久化 |
+| 📍 地点搜索与推荐 | 搜地点/公交站，按当前位置推荐直达线路，显示上/下车站、步行距离与乘坐站数 |
+| 🧩 原生 UI | 原生 View 绘制，无 WebView、无地图 SDK、无广告位 |
 
 ## 界面
 
@@ -68,21 +72,29 @@
 | --- | --- |
 | ![北京](docs/screenshots/beijing.png) | ![上海](docs/screenshots/shanghai.png) |
 
+| 地点搜索 | 直达推荐 | 推荐下车站 | 横向时间轴 |
+| --- | --- | --- | --- |
+| ![地点搜索](docs/screenshots/route-search.png) | ![直达推荐](docs/screenshots/route-plan.png) | ![下车站](docs/screenshots/timeline-alight.png) | ![横向时间轴](docs/screenshots/timeline.png) |
+
+| 亮色模式 | 特大字号 |
+| --- | --- |
+| ![亮色](docs/screenshots/settings-light.png) | ![130% 字号](docs/screenshots/font-130.png) |
+
 ## 下载与安装
 
 仓库内附构建好的 APK：
 
-    release/chelaile-open-0.2.2.apk
+    release/chelaile-open-0.3.0.apk
 
-- 大小：70,207 字节
-- SHA-256：9a18ce6a2d72b83914dc36538dfb4efcb7c74574c1d7a9691cccb998be2ca041
-- GitHub Releases：https://github.com/Lumorian/chelaile-open/releases/tag/v0.2.2
+- 大小：82,495 字节
+- SHA-256：971b2eef256437e565da3fd2144069d6df8c818a8eecbe570fe38a775251f0c4
+- GitHub Releases：https://github.com/Lumorian/chelaile-open/releases/tag/v0.3.0
 - 最低系统：Android 7.0（API 24）
 - 目标 SDK：34
 
 安装：
 
-    adb install -r release/chelaile-open-0.2.2.apk
+    adb install -r release/chelaile-open-0.3.0.apk
     adb shell am start -n org.chelaileopen.app/.MainActivity
 
 首次启动会请求定位权限；授权后自动定位并匹配城市。通知权限不在启动时请求，首次设置到站提醒时再请求。拒绝定位仍可手动选城市。
@@ -102,7 +114,7 @@ APK 使用仓库内的 debug keystore 签名，只适合本地测试。正式分
     export ANDROID_SDK_ROOT=$HOME/android-sdk
     cd apps/android
     ./build.sh
-    # 产物：build/chelaile-open-0.2.2.apk
+    # 产物：build/chelaile-open-0.3.0.apk
 
 脚本依次执行 aapt2 compile/link、javac、d8、zipalign、apksigner。首次运行会自动生成 keystore/debug.keystore。
 
@@ -140,13 +152,15 @@ APK 使用仓库内的 debug keystore 签名，只适合本地测试。正式分
 
 更多端点、字段和语义见 [docs/06-Android客户端.md](docs/06-Android客户端.md) 与 [docs/02-协议参考.md](docs/02-协议参考.md)。
 
-## 时间轴与蓝点
+## 横向时间轴与蓝点
 
+- 时间轴横向滚动，打开线路页会先自动聚焦到离你最近的站；
 - buses[].order 表示车辆**正在驶向的下一站**序号，不是已过站序号；
 - 已过站（stop.order < bus.order）为灰点；
 - 车辆下一站（stop.order == bus.order）为蓝色 ACCENT 点，并显示「车辆下一站」；
-- 你所在/关注的站为绿点，显示「你在这」；
-- 车辆 marker 插在下一站行之前，文案「🚌 车辆在此 · 距下一站 N 米」。
+- 你所在/关注的站为绿点，显示「你在这 · N 米」；
+- 推荐方案的下车站为橙色圆点，显示「下车站」；
+- 车辆 marker 插在下一站附近，文案「🚌 车辆在此 · 距下一站 N 米」。
 
 ## 已知限制
 
@@ -157,7 +171,8 @@ APK 使用仓库内的 debug keystore 签名，只适合本地测试。正式分
 5. **历史到站只在本机**：公开接口不提供历史到站；本机记录依赖多次打开线路页，样本少时只显示「还没有记录」。
 6. **提醒依赖前台服务**：系统省电策略可能回收；轮询间隔 20 秒，精度有限。
 7. **未实现**：地图选站、地铁换乘、账号登录、支付、广告、系统推送、语音搜索。
-8. **接口可能随时变更**：本项目只做学习研究，不保证长期可用。
+8. **路线推荐只做直达**：按起点附近线路与完整站序匹配上/下车站，暂不做一次换乘；无直达时会明确提示「没有找到直达方案」。
+9. **接口可能随时变更**：本项目只做学习研究，不保证长期可用。
 
 ## 仓库结构
 
@@ -177,7 +192,7 @@ APK 使用仓库内的 debug keystore 签名，只适合本地测试。正式分
 | [docs/02-协议参考.md](docs/02-协议参考.md) | 端点、参数、响应、加密签名、错误码、curl 示例 |
 | [docs/03-架构与实现.md](docs/03-架构与实现.md) | TypeScript 协议层/BFF/Web 的架构与数据流 |
 | [docs/04-合规与免责.md](docs/04-合规与免责.md) | 法律边界、抓取频率、数据归属、侵权处理 |
-| [docs/05-路线图与已知问题.md](docs/05-路线图与已知问题.md) | Android 0.2.2 状态、已知问题与后续计划 |
+| [docs/05-路线图与已知问题.md](docs/05-路线图与已知问题.md) | Android 0.3.0 状态、已知问题与后续计划 |
 | [docs/06-Android客户端.md](docs/06-Android客户端.md) | Android 架构、构建、协议、时间轴/时刻表/提醒/坐标、验证清单 |
 
 ## 合规与免责

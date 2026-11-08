@@ -25,6 +25,7 @@ public class SettingsScreen extends Screen {
     private TextView cityValue;
     private TextView refreshValue;
     private TextView historyValue;
+    private TextView appearanceValue;
 
     public SettingsScreen(MainActivity host) {
         super(host);
@@ -74,6 +75,24 @@ public class SettingsScreen extends Screen {
         root.addView(refreshCard);
         root.addView(Ui.space(host, 10));
 
+        LinearLayout appearanceCard = Ui.card(host);
+        appearanceCard.addView(Ui.text(host, "显示与字体", 15, Ui.TEXT, true));
+        appearanceValue = Ui.text(host, appearanceText(), 13, Ui.MUTED, false);
+        LinearLayout.LayoutParams alp = Ui.matchWrap();
+        alp.topMargin = Ui.dp(host, 4);
+        appearanceCard.addView(appearanceValue, alp);
+        LinearLayout appearanceRow = Ui.row(host);
+        appearanceRow.setPadding(0, Ui.dp(host, 10), 0, 0);
+        TextView themeBtn = Ui.button(host, "切换主题", Ui.SURFACE2, Ui.ACCENT, v -> showThemeDialog());
+        TextView fontBtn = Ui.button(host, "调整字体", Ui.SURFACE2, Ui.ACCENT, v -> showFontDialog());
+        LinearLayout.LayoutParams al1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        al1.rightMargin = Ui.dp(host, 8);
+        appearanceRow.addView(themeBtn, al1);
+        appearanceRow.addView(fontBtn, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        appearanceCard.addView(appearanceRow);
+        root.addView(appearanceCard);
+        root.addView(Ui.space(host, 10));
+
         LinearLayout historyCard = Ui.card(host);
         historyCard.addView(Ui.text(host, "本机历史到站", 15, Ui.TEXT, true));
         historyValue = Ui.text(host, "用于在没有实时数据时给出历史到站参考；数据只存在这台手机上，不会上传。", 12, Ui.MUTED, false);
@@ -89,7 +108,7 @@ public class SettingsScreen extends Screen {
 
         LinearLayout about = Ui.card(host);
         about.addView(Ui.text(host, "关于", 15, Ui.TEXT, true));
-        TextView body = Ui.text(host, "车来了 Open 0.2.2\n"
+        TextView body = Ui.text(host, "车来了 Open 0.3.0\n"
                 + "一个开源的公交到站客户端，复刻自车来了 Android 版 7.6.8 的公开 H5 接口。\n\n"
                 + "· 数据来源：web.chelaile.net.cn 的公开接口，版权归原公司所有\n"
                 + "· 本项目仅用于学习与研究，不与官方关联，请勿商用\n"
@@ -100,7 +119,7 @@ public class SettingsScreen extends Screen {
         about.addView(body, blp);
         root.addView(about);
 
-        TextView version = Ui.text(host, "version 0.2.2 · build 4", 11, Ui.FAINT, false);
+        TextView version = Ui.text(host, "version 0.3.0 · build 5", 11, Ui.FAINT, false);
         version.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams vlp = Ui.matchWrap();
         vlp.topMargin = Ui.dp(host, 16);
@@ -114,6 +133,7 @@ public class SettingsScreen extends Screen {
     public void onResume() {
         cityValue.setText(app.cityName());
         refreshValue.setText(app.refreshSeconds() + " 秒");
+        if (appearanceValue != null) appearanceValue.setText(appearanceText());
         app.run(() -> app.history.totalSamples("", 0), n -> {
         }, e -> {
         });
@@ -235,6 +255,48 @@ public class SettingsScreen extends Screen {
             }
         }
         toast("城市列表里没有「" + name + "」");
+    }
+
+    private String appearanceText() {
+        return (app.lightMode() ? "亮色" : "深色") + " · " + fontLabel();
+    }
+
+    private String fontLabel() {
+        float s = app.fontScale();
+        if (s >= 1.45f) return "超大 150%";
+        if (s >= 1.25f) return "特大 130%";
+        if (s >= 1.1f) return "大 115%";
+        return "标准 100%";
+    }
+
+    private void showThemeDialog() {
+        String[] labels = {"深色模式（默认）", "亮色模式"};
+        int checked = app.lightMode() ? 1 : 0;
+        new AlertDialog.Builder(host)
+                .setTitle("选择主题")
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    app.setLightMode(which == 1);
+                    dialog.dismiss();
+                    host.recreate();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void showFontDialog() {
+        final float[] values = {1.0f, 1.15f, 1.3f, 1.5f};
+        String[] labels = {"标准 100%", "大 115%", "特大 130%", "超大 150%" };
+        int checked = 0;
+        for (int i = 0; i < values.length; i++) if (Math.abs(values[i] - app.fontScale()) < 0.01f) checked = i;
+        new AlertDialog.Builder(host)
+                .setTitle("字体大小")
+                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
+                    app.setFontScale(values[which]);
+                    dialog.dismiss();
+                    host.recreate();
+                })
+                .setNegativeButton("取消", null)
+                .show();
     }
 
     private void showRefreshDialog() {

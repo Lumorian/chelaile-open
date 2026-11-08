@@ -325,6 +325,13 @@ public class Api {
         return Models.StationDetail.from(getJson("/api/bus/stop!encryptedPhyStnDetail.action", p, false));
     }
 
+    /** 官方地名搜索：POI + 公交站 + 相关线路。参数名必须是 key。 */
+    public Models.PlaceSearch searchPlaces(String key) throws Exception {
+        Map<String, String> p = baseParams();
+        p.put("key", key == null ? "" : key.trim());
+        return Models.PlaceSearch.from(getJson("/api/bus/query!encryptedNSearch.action", p, false));
+    }
+
     /** 首站发车时刻表（发车时间功能）。没有数据时返回空对象。 */
     public Models.Timetable depTimeTable(String lineId, String lineName, int direction, int targetOrder) throws Exception {
         Map<String, String> p = baseParams();

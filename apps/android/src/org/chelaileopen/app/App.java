@@ -95,6 +95,25 @@ public class App extends Application {
         return prefs.getInt("refreshSec", 15);
     }
 
+    public boolean lightMode() {
+        return prefs.getBoolean("lightMode", false);
+    }
+
+    public void setLightMode(boolean light) {
+        prefs.edit().putBoolean("lightMode", light).apply();
+    }
+
+    /** 字号倍数：标准 1.0、大 1.15、特大 1.3、超大 1.5。 */
+    public float fontScale() {
+        return prefs.getFloat("fontScale", 1f);
+    }
+
+    public void setFontScale(float scale) {
+        if (scale < 0.8f) scale = 0.8f;
+        if (scale > 1.8f) scale = 1.8f;
+        prefs.edit().putFloat("fontScale", scale).apply();
+    }
+
     public void setCity(String cityId, String cityName) {
         prefs.edit().putString("cityId", cityId).putString("cityName", cityName).apply();
         api.setCity(cityId);
