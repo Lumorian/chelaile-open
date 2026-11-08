@@ -1,0 +1,31 @@
+# 依赖
+node_modules/
+
+# 构建产物
+dist/
+*.tsbuildinfo
+.vite/
+
+# 逆向工作区：样本、反编译产物、工具链（体积大且含上游二进制）
+work/
+out/
+tools/
+*.apk
+!release/*.apk
+*.dex
+*.jar
+
+# 本地环境
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.log
+coverage/
+.idea/
+.vscode/
+
+# Android 构建产物与本地签名
+apps/android/build/
+apps/android/keystore/

@@ -1,0 +1,14 @@
+{
+  "name": "@chelaile/cli",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "description": "命令行版车来了：附近线路、线路详情、站点到站",
+  "bin": {
+    "chelaile": "src/index.ts"
+  },
+  "scripts": {
+    "start": "node src/index.ts"
+  },
+  "license": "MIT"
+}

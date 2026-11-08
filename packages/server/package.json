@@ -1,0 +1,17 @@
+{
+  "name": "@chelaile/server",
+  "version": "0.1.1",
+  "private": true,
+  "type": "module",
+  "description": "本地 BFF：代理车来了 H5 接口、加缓存、托管前端静态资源",
+  "main": "src/index.ts",
+  "bin": {
+    "chelaile-server": "src/index.ts"
+  },
+  "scripts": {
+    "start": "node src/index.ts",
+    "dev": "node --watch src/index.ts"
+  },
+  "dependencies": {},
+  "license": "MIT"
+}
